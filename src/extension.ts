@@ -7,9 +7,6 @@ interface DetectedError {
   pattern: string;
 }
 
-// Buffer per terminal to accumulate multi-line output before scanning
-const terminalBuffers = new Map<string, string>();
-
 let statusBarItem: vscode.StatusBarItem;
 let enabled = true;
 
@@ -33,39 +30,40 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // vscode.window.onDidWriteTerminalData fires on every chunk of terminal output
-  const dataListener = vscode.window.onDidWriteTerminalData((event) => {
+  // onDidEndTerminalShellExecution fires after each command completes (VS Code 1.93+).
+  // event.execution.read() streams the full output of that command.
+  const execListener = vscode.window.onDidEndTerminalShellExecution((event) => {
     if (!enabled) return;
-    handleTerminalData(event.terminal, event.data);
+    handleShellExecution(event.terminal, event.execution);
   });
 
-  context.subscriptions.push(toggleCmd, dataListener, statusBarItem);
+  context.subscriptions.push(toggleCmd, execListener, statusBarItem);
 }
 
-function handleTerminalData(terminal: vscode.Terminal, data: string) {
-  const key = terminal.name;
+async function handleShellExecution(
+  terminal: vscode.Terminal,
+  execution: vscode.TerminalShellExecution
+) {
+  let output = "";
+  for await (const chunk of execution.read()) {
+    output += chunk;
+  }
 
-  // Strip ANSI escape codes so regex patterns match plain text
-  const clean = stripAnsi(data);
-
-  // Accumulate into a rolling buffer (keep last 2000 chars to avoid unbounded growth)
-  const prev = terminalBuffers.get(key) ?? "";
-  const buffer = (prev + clean).slice(-2000);
-  terminalBuffers.set(key, buffer);
-
+  const clean = stripAnsi(output);
   const patterns = getPatterns();
+
   for (const raw of patterns) {
     const regex = new RegExp(raw, "i");
     const match = regex.exec(clean);
     if (match) {
       const detected: DetectedError = {
-        raw: extractErrorBlock(buffer, match.index ?? 0),
-        terminal: key,
+        raw: extractErrorBlock(clean, match.index),
+        terminal: terminal.name,
         timestamp: new Date(),
         pattern: raw,
       };
       onErrorDetected(detected);
-      break; // one notification per data chunk is enough
+      break; // one notification per command is enough
     }
   }
 }
@@ -135,6 +133,4 @@ function stripAnsi(s: string): string {
   return s.replace(/\x1B\[[0-9;]*[A-Za-z]/g, "").replace(/\r/g, "");
 }
 
-export function deactivate() {
-  terminalBuffers.clear();
-}
+export function deactivate() {}
