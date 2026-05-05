@@ -12,6 +12,14 @@
       {
         "command": "cleoErrorDetective.toggle",
         "title": "Cleo: Toggle Terminal Error Detection"
+      },
+      {
+        "command": "cleoErrorDetective.checkShellIntegration",
+        "title": "Cleo: Check Shell Integration Status"
+      },
+      {
+        "command": "cleoErrorDetective.testDetection",
+        "title": "Cleo: Test Error Detection (Fire Fake Error)"
       }
     ],
     "configuration": {
@@ -37,7 +45,24 @@
             "npm ERR!",
             "yarn error",
             "FATAL",
-            "Traceback (most recent call last)"
+            "Traceback (most recent call last)",
+            "NoMethodError",
+            "NameError",
+            "ArgumentError",
+            "LoadError",
+            "RuntimeError",
+            "ActiveRecord::",
+            "ActionController::",
+            "ActionView::",
+            "Bundler::GemNotFound",
+            "bundler: failed",
+            "rails aborted!",
+            "PG::",
+            "error: failed to push",
+            "CONFLICT \\(",
+            "fatal: ",
+            "error: pathspec",
+            "You have unmerged paths"
           ],
           "description": "Regex patterns to treat as errors in terminal output"
         }
