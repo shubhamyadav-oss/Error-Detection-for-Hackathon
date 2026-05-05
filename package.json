@@ -1,0 +1,57 @@
+{
+  "name": "cleo-error-detective",
+  "displayName": "Cleo Error Detective",
+  "description": "Detects errors in terminal output and searches Cleo resources for solutions",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cleoErrorDetective.toggle",
+        "title": "Cleo: Toggle Terminal Error Detection"
+      }
+    ],
+    "configuration": {
+      "title": "Cleo Error Detective",
+      "properties": {
+        "cleoErrorDetective.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic terminal error detection"
+        },
+        "cleoErrorDetective.patterns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "Error:",
+            "TypeError:",
+            "SyntaxError:",
+            "ReferenceError:",
+            "UnhandledPromiseRejection",
+            "ENOENT",
+            "ECONNREFUSED",
+            "exit code [1-9]",
+            "npm ERR!",
+            "yarn error",
+            "FATAL",
+            "Traceback (most recent call last)"
+          ],
+          "description": "Regex patterns to treat as errors in terminal output"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
