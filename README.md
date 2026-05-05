@@ -8,9 +8,6 @@
   - `contributes.configuration.cleoErrorDetective.patterns` — configurable list of regex patterns; users can add Cleo-sp
 ecific ones (e.g. "DatabaseConnectionError") without touching code
 
-
-
-
 ## `tsconfig.json`
 
   - Standard extension config targeting ES2022/Node16 modules
@@ -31,4 +28,5 @@ ful input
 
   - Status bar toggle — lets you quickly enable/disable without a command palette trip
 
-
+Inside the editor, `open src/extension.ts` and press `F5` or run the command Debug: Start Debugging from the Command Palette. This will compile and run the extension in a new Extension Development Host window.
+If `F5` does nothing, then make sure `.vscode` directory exists with `launch.json` and `tasks.json` inside it.
