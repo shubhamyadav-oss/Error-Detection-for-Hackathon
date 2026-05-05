@@ -8,6 +8,32 @@
   "activationEvents": ["onStartupFinished"],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cleoErrorDetective",
+          "title": "Cleo Error Detective",
+          "icon": "media/bug.svg"
+        }
+      ]
+    },
+    "views": {
+      "cleoErrorDetective": [
+        {
+          "id": "cleoErrorHistory",
+          "name": "Error History"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "cleoErrorDetective.clearHistory",
+          "when": "view == cleoErrorHistory",
+          "group": "navigation"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "cleoErrorDetective.toggle",
@@ -20,6 +46,15 @@
       {
         "command": "cleoErrorDetective.testDetection",
         "title": "Cleo: Test Error Detection (Fire Fake Error)"
+      },
+      {
+        "command": "cleoErrorDetective.clearHistory",
+        "title": "Cleo: Clear Error History",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "cleoErrorDetective.showHistoryError",
+        "title": "Cleo: Show Error"
       }
     ],
     "configuration": {
