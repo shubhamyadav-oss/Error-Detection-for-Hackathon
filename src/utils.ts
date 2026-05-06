@@ -20,11 +20,14 @@ export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-// Grabs up to 5 lines before the match and 30 lines after for context (stack traces can be long)
+// Grabs up to 10 lines before the match and 30 lines after for context.
+// 10 before: foreman-style output interleaves process names before the exception line,
+// so the "bundler: failed to load" lines that precede Bundler::GemNotFound need headroom.
+// 30 after: stack traces can be long.
 export function extractErrorBlock(buffer: string, matchIndex: number): string {
   const lines = buffer.split("\n");
   const lineOfMatch = buffer.slice(0, matchIndex).split("\n").length - 1;
-  const start = Math.max(0, lineOfMatch - 5);
+  const start = Math.max(0, lineOfMatch - 10);
   return lines.slice(start, lineOfMatch + 30).join("\n").trim();
 }
 

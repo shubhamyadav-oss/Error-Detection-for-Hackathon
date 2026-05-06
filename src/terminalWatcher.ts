@@ -46,10 +46,11 @@ async function handleShellExecution(
 
   for await (const chunk of execution.read()) {
     tail += chunk;
-    if (tail.length > TAIL_MAX_CHARS) {
-      tail = tail.slice(-TAIL_KEEP_CHARS);
-    }
 
+    // Scan BEFORE trimming: if a large chunk arrives all at once (e.g. foreman with 4 processes
+    // dying simultaneously the entire output lands in one chunk), trimming first would discard
+    // the early lines containing the first error occurrence, leaving only the tail of the last
+    // process's stack trace to scan against.
     const clean = stripAnsi(tail);
     const patterns = getPatterns();
 
@@ -78,6 +79,11 @@ async function handleShellExecution(
         tail = "";
         break;
       }
+    }
+
+    // Trim after scanning to bound memory for long-running processes that produce continuous output
+    if (tail.length > TAIL_MAX_CHARS) {
+      tail = tail.slice(-TAIL_KEEP_CHARS);
     }
   }
 
