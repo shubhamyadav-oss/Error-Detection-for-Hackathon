@@ -539,7 +539,7 @@ function buildHtml(error: DetectedError): string {
             '</div>' +
             '<div class="explain-section">' +
               '<p class="explain-section-label">Suggested fix</p>' +
-              '<pre>// Add a nil check before calling save!\nif user_account\n  user_account.save!\nelse\n  Rails.logger.warn "UserAccount not found"\nend\n\n// Or use the safe navigation operator\nuser_account&.save!</pre>' +
+              '<pre>// Add a nil check before calling save!\nif user_account\n  user_account.save!\nelse\n  Rails.logger.warn \'UserAccount not found\'\nend\n\n// Or use the safe navigation operator\nuser_account&amp;.save!</pre>' +
             '</div>' +
           '</div>';
       }, 900);
