@@ -504,7 +504,7 @@ function buildHtml(error: DetectedError): string {
       }
     }
 
-    var mockDraft = 'Hey team, seeing a NoMethodError on save! in the payments flow.\n\nError: NoMethodError: undefined method ‘save!’ for nil:NilClass\n\nHas anyone run into this before? Any pointers appreciated 🙏';
+    var mockDraft = "Hey team, seeing a NoMethodError on save! in the payments flow.\n\nError: NoMethodError: undefined method ‘save!’ for nil:NilClass\n\nHas anyone run into this before? Any pointers appreciated 🙏";
 
     function showNoMatch() {
       const results = document.getElementById('results');
