@@ -1,10 +1,6 @@
 import * as vscode from "vscode";
 import { DetectedError } from "./types";
-      // Actions sec w/ 3 buttons for Search, Explain, No Match
-      // button for secondary is subtler.. for No Match and Explain
-       // Actions ; search is primary (filled) vs Explain + No Match are secondary (subtler)
-       // clicking any button now reveals #results w/ spinning circle (Load) + relevant Label (e.g "Searching Slack & Notion.." etc)
-       // spinner is pure css - no external assets, and #results stays hidden or visible once shown! 
+
 let panel: vscode.WebviewPanel | undefined;
 
 export function showErrorInWebview(error: DetectedError): void {
@@ -40,15 +36,25 @@ export function showErrorInWebview(error: DetectedError): void {
   });
 }
 
+function getNonce(): string {
+  let text = "";
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for (let i = 0; i < 32; i++) {
+    text += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return text;
+}
+
 function buildHtml(error: DetectedError): string {
   const time = error.timestamp.toLocaleString();
+  const nonce = getNonce();
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
   <title>Cleo Error Detail</title>
   <style>
     body {
@@ -115,7 +121,7 @@ function buildHtml(error: DetectedError): string {
       border: none;
       border-top: 1px solid var(--vscode-panel-border);
       margin: 24px 0;
-    } 
+    }
 
     .actions-label {
       font-size: 11px;
@@ -388,28 +394,61 @@ function buildHtml(error: DetectedError): string {
   </div>
   <p class="actions-label">What do you want to do?</p>
   <div class="actions">
-    <button id="btn-search" onclick="cycleSearchDemo()">Search Slack &amp; Notion</button>
-    <button id="btn-explain" class="secondary" onclick="vscode.postMessage({ command: 'explain', errorText: errorText }); showExplainDemo()">Explain Error</button>
-    <button id="btn-no-match" class="secondary" onclick="vscode.postMessage({ command: 'no_match', errorText: errorText }); showNoMatch()">No Match</button>
+    <button id="btn-search">Search Slack &amp; Notion</button>
+    <button id="btn-explain" class="secondary">Explain Error</button>
+    <button id="btn-no-match" class="secondary">No Match</button>
   </div>
 
   <div id="results"></div>
+
+  <div id="__error-raw" style="display:none">${escapeHtml(error.raw)}</div>
 
   <hr class="divider" />
   <p class="section-label">Output</p>
   <pre>${escapeHtml(error.raw)}</pre>
 
-  <script>
+  <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
-    const errorText = ${JSON.stringify(error.raw)};
+    const errorText = document.getElementById('__error-raw').textContent;
+    console.log('[error-assistant] webview script initialized, errorText length:', errorText ? errorText.length : 0);
+
+    document.getElementById('btn-search').addEventListener('click', function() {
+      console.log('[error-assistant] Search button clicked');
+      cycleSearchDemo();
+    });
+    document.getElementById('btn-explain').addEventListener('click', function() {
+      console.log('[error-assistant] Explain button clicked');
+      vscode.postMessage({ command: 'explain', errorText: errorText });
+      showExplainDemo();
+    });
+    document.getElementById('btn-no-match').addEventListener('click', function() {
+      console.log('[error-assistant] No Match button clicked');
+      vscode.postMessage({ command: 'no_match', errorText: errorText });
+      showNoMatch();
+    });
+
+    // Event delegation for dynamically rendered buttons (copy, card toggles)
+    document.getElementById('results').addEventListener('click', function(event) {
+      var target = event.target;
+      if (target.classList.contains('copy-btn')) {
+        var text = document.getElementById('draft-text').innerText;
+        navigator.clipboard.writeText(text);
+        return;
+      }
+      var header = target.closest('.card-header');
+      if (header) {
+        var index = header.getAttribute('data-index');
+        if (index !== null) toggleCard(parseInt(index, 10));
+      }
+    });
 
     window.addEventListener('message', function(event) {
-      // Ready to receive results back from the extension host in Step 3
       const msg = event.data;
       console.log('[error-assistant] message from extension:', msg);
     });
 
     function showLoading(label) {
+      console.log('[error-assistant] showLoading:', label);
       const results = document.getElementById('results');
       results.style.display = 'block';
       results.innerHTML =
@@ -423,7 +462,7 @@ function buildHtml(error: DetectedError): string {
       {
         source: 'slack',
         score: 0.92,
-        title: 'NoMethodError on save! — payments flow',
+        title: 'NoMethodError on save! \u2014 payments flow',
         summary: 'Resolved by adding a nil check before calling save! on the UserAccount object. Fix shipped in PR #4421.',
         score_breakdown: ['exception match', 'resolved reply', 'positive reactions'],
         source_links: ['https://cleo.slack.com/archives/C123/p456']
@@ -455,7 +494,7 @@ function buildHtml(error: DetectedError): string {
         .join('');
       return (
         '<div class="card" id="card-' + index + '">' +
-          '<div class="card-header" onclick="toggleCard(' + index + ')">' +
+          '<div class="card-header" data-index="' + index + '">' +
             '<span class="source-badge ' + result.source + '">' + result.source + '</span>' +
             '<span class="card-title">' + result.title + '</span>' +
             '<span class="score-chip">' + Math.round(result.score * 100) + '%</span>' +
@@ -475,12 +514,13 @@ function buildHtml(error: DetectedError): string {
     }
 
     function showResults(type) {
+      console.log('[error-assistant] showResults:', type);
       const results = document.getElementById('results');
       results.style.display = 'block';
       const banner = type === 'weak'
         ? '<div class="weak-banner">' +
             '<span class="weak-banner-icon">&#9888;</span>' +
-            '<span>Low confidence matches — these results may not be directly related to your error.</span>' +
+            '<span>Low confidence matches \u2014 these results may not be directly related to your error.</span>' +
           '</div>'
         : '';
       results.innerHTML =
@@ -504,9 +544,10 @@ function buildHtml(error: DetectedError): string {
       }
     }
 
-    var mockDraft = "Hey team, seeing a NoMethodError on save! in the payments flow.\n\nError: NoMethodError: undefined method ‘save!’ for nil:NilClass\n\nHas anyone run into this before? Any pointers appreciated 🙏";
+    var mockDraft = "Hey team, seeing a NoMethodError on save! in the payments flow. Error: NoMethodError: undefined method \u2018save!\u2019 for nil:NilClass. Has anyone run into this before? Any pointers appreciated ";
 
     function showNoMatch() {
+      console.log('[error-assistant] showNoMatch');
       const results = document.getElementById('results');
       results.style.display = 'block';
       results.innerHTML =
@@ -516,16 +557,12 @@ function buildHtml(error: DetectedError): string {
           '<a class="channel-link" href="https://cleo.slack.com/channels/payments-incidents">#payments-incidents</a>' +
           '<p class="draft-label">Pre-drafted message</p>' +
           '<div class="draft-message" id="draft-text">' + mockDraft + '</div>' +
-          '<button class="secondary copy-btn" onclick="copyDraft()">Copy message</button>' +
+          '<button class="secondary copy-btn">Copy message</button>' +
         '</div>';
     }
 
-    function copyDraft() {
-      const text = document.getElementById('draft-text').innerText;
-      navigator.clipboard.writeText(text);
-    }
-
     function showExplainDemo() {
+      console.log('[error-assistant] showExplainDemo');
       showLoading('Asking AI to explain...');
       setTimeout(function() {
         const results = document.getElementById('results');
@@ -535,11 +572,11 @@ function buildHtml(error: DetectedError): string {
           '<div class="explain-panel">' +
             '<div class="explain-section">' +
               '<p class="explain-section-label">What happened</p>' +
-              '<p>This error occurs when you call a method (<code>save!</code>) on a <code>nil</code> object. In Ruby, <code>nil:NilClass</code> is the null type — calling any method on it raises <code>NoMethodError</code>. This typically means the object was never initialised, or a database query returned <code>nil</code> instead of a record.</p>' +
+              '<p>This error occurs when you call a method (<code>save!</code>) on a <code>nil</code> object. In Ruby, <code>nil:NilClass</code> is the null type \u2014 calling any method on it raises <code>NoMethodError</code>. This typically means the object was never initialised, or a database query returned <code>nil</code> instead of a record.</p>' +
             '</div>' +
             '<div class="explain-section">' +
               '<p class="explain-section-label">Suggested fix</p>' +
-              '<pre>// Add a nil check before calling save!\nif user_account\n  user_account.save!\nelse\n  Rails.logger.warn \'UserAccount not found\'\nend\n\n// Or use the safe navigation operator\nuser_account&amp;.save!</pre>' +
+              '<pre>// Add a nil check before calling save!\\nif user_account\\n  user_account.save!\\nelse\\n  Rails.logger.warn "UserAccount not found"\\nend\\n\\n// Or use the safe navigation operator\\nuser_account&amp;.save!</pre>' +
             '</div>' +
           '</div>';
       }, 900);
