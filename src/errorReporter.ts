@@ -1,9 +1,12 @@
 import * as vscode from "vscode";
 import { DetectedError } from "./types";
 import { truncate, log } from "./utils";
+import { errorHistoryProvider } from "./errorHistoryProvider";
+import { showErrorInWebview } from "./errorWebview";
 
 export function onErrorDetected(error: DetectedError): void {
   log(`Error detected — terminal: "${error.terminal}", pattern: "${error.pattern}"`);
+  errorHistoryProvider.add(error);
 
   vscode.window
     .showErrorMessage(
@@ -12,22 +15,7 @@ export function onErrorDetected(error: DetectedError): void {
     )
     .then((choice) => {
       if (choice === "Show Full Error") {
-        showErrorDocument(error);
+        showErrorInWebview(error);
       }
     });
-}
-
-function showErrorDocument(error: DetectedError): void {
-  const content = [
-    `Terminal : ${error.terminal}`,
-    `Detected : ${error.timestamp.toISOString()}`,
-    `Pattern  : ${error.pattern}`,
-    ``,
-    `--- Error Output ---`,
-    error.raw,
-  ].join("\n");
-
-  vscode.workspace
-    .openTextDocument({ content, language: "plaintext" })
-    .then((doc) => vscode.window.showTextDocument(doc));
 }

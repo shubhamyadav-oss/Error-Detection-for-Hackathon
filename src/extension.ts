@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import { createStatusBar, checkShellIntegration, setEnabled } from "./statusBar";
 import { registerTerminalWatcher } from "./terminalWatcher";
 import { onErrorDetected } from "./errorReporter";
+import { errorHistoryProvider } from "./errorHistoryProvider";
+import { showErrorInWebview } from "./errorWebview";
 import { log } from "./utils";
 
 let enabled = true;
@@ -12,6 +14,8 @@ export function activate(context: vscode.ExtensionContext) {
   createStatusBar(context);
   checkShellIntegration();
   registerTerminalWatcher(context, () => enabled);
+
+  vscode.window.registerTreeDataProvider("cleoErrorHistory", errorHistoryProvider);
 
   const shellIntegrationListener = vscode.window.onDidChangeTerminalShellIntegration((event) => {
     log(`Shell integration changed for terminal: "${event.terminal.name}"`);
@@ -67,12 +71,27 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const clearHistoryCmd = vscode.commands.registerCommand(
+    "cleoErrorDetective.clearHistory",
+    () => {
+      errorHistoryProvider.clear();
+      log("Error history cleared.");
+    }
+  );
+
+  const showHistoryErrorCmd = vscode.commands.registerCommand(
+    "cleoErrorDetective.showHistoryError",
+    (error) => showErrorInWebview(error)
+  );
+
   context.subscriptions.push(
     shellIntegrationListener,
     newTerminalListener,
     toggleCmd,
     checkCmd,
-    testCmd
+    testCmd,
+    clearHistoryCmd,
+    showHistoryErrorCmd
   );
 
   log(`Extension activated. Open terminals: ${vscode.window.terminals.length}`);
