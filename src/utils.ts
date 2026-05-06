@@ -1,5 +1,3 @@
-import * as vscode from "vscode";
-
 export function stripAnsi(s: string): string {
   return s
     // OSC sequences: ESC ] ... BEL or ESC \ (shell integration markers, window titles)
@@ -29,12 +27,6 @@ export function extractErrorBlock(buffer: string, matchIndex: number): string {
   const lineOfMatch = buffer.slice(0, matchIndex).split("\n").length - 1;
   const start = Math.max(0, lineOfMatch - 10);
   return lines.slice(start, lineOfMatch + 30).join("\n").trim();
-}
-
-export function getPatterns(): string[] {
-  return vscode.workspace
-    .getConfiguration("cleoErrorDetective")
-    .get<string[]>("patterns", []);
 }
 
 export function log(message: string): void {

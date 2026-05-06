@@ -20,6 +20,22 @@ export function setEnabled(value: boolean): void {
   refresh();
 }
 
+export function showShellIntegrationStatus(): void {
+  const terminals = vscode.window.terminals;
+  if (terminals.length === 0) {
+    log("No open terminals found.");
+    vscode.window.showWarningMessage("Cleo: No open terminals found.");
+    return;
+  }
+  const lines = terminals.map((t) => {
+    const status = t.shellIntegration ? "✅ shell integration active" : "❌ no shell integration";
+    return `  "${t.name}": ${status}`;
+  });
+  const report = ["Shell integration status:", ...lines].join("\n");
+  log(report);
+  vscode.window.showInformationMessage(report, { modal: true });
+}
+
 export function checkShellIntegration(): void {
   const hasIntegration = vscode.window.terminals.some(
     (t) => t.shellIntegration !== undefined

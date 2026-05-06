@@ -1,20 +1,40 @@
 import * as vscode from "vscode";
-import { DetectedError } from "./types";
-import { stripAnsi, extractErrorBlock, getPatterns, log } from "./utils";
+import { DetectedError, ExecutionState } from "./types";
+import { stripAnsi, extractErrorBlock, log } from "./utils";
+import { getPatterns } from "./config";
 import { onErrorDetected } from "./errorReporter";
 
-// Per-terminal cooldown: suppress repeat alerts within this window (ms).
-// Prevents a foreman-style cascade (4 processes failing at once) from firing 4 notifications.
 const COOLDOWN_MS = 10_000;
-const lastAlertAt = new Map<string, number>();
+
+class Cooldown {
+  private readonly lastAt = new Map<string, number>();
+
+  isSuppressed(key: string): boolean {
+    return Date.now() - (this.lastAt.get(key) ?? 0) < COOLDOWN_MS;
+  }
+
+  record(key: string): void {
+    this.lastAt.set(key, Date.now());
+  }
+}
+
+const cooldown = new Cooldown();
+
+// Executions that already fired a pattern-based alert — exit-code path skips these
+// to avoid reporting the same failure twice.
+const alertedExecutions = new WeakSet<vscode.TerminalShellExecution>();
+
+// Output state per execution. An object reference so handleShellEnd always reads the
+// latest tail even though handleShellExecution is still awaiting when end fires.
+const executionStates = new WeakMap<vscode.TerminalShellExecution, ExecutionState>();
 
 export function registerTerminalWatcher(
   context: vscode.ExtensionContext,
   isEnabled: () => boolean
 ): void {
-  // execution.read() is a live stream — must be consumed during onDidStart, not onDidEnd.
-  // By the time onDidEnd fires the stream is already closed and returns 0 bytes.
-  const listener = vscode.window.onDidStartTerminalShellExecution((event) => {
+  // Stream listener: pattern-based detection for long-running processes (foreman, rails server,
+  // sidekiq) where exit code arrives too late to be useful mid-run.
+  const startListener = vscode.window.onDidStartTerminalShellExecution((event) => {
     log(`onDidStartTerminalShellExecution fired for terminal: "${event.terminal.name}"`);
     if (!isEnabled()) {
       log("Detection is disabled — skipping.");
@@ -23,69 +43,111 @@ export function registerTerminalWatcher(
     handleShellExecution(event.terminal, event.execution);
   });
 
-  context.subscriptions.push(listener);
+  // Exit code listener: primary detector for short-lived commands (bundle install,
+  // rails db:migrate, git push, npm install, etc.). Any non-zero exit means failure.
+  const endListener = vscode.window.onDidEndTerminalShellExecution((event) => {
+    if (!isEnabled()) return;
+    handleShellEnd(event.execution, event.exitCode);
+  });
+
+  context.subscriptions.push(startListener, endListener);
 }
 
 async function handleShellExecution(
   terminal: vscode.Terminal,
   execution: vscode.TerminalShellExecution
 ): Promise<void> {
-  // Capture the terminal name immediately — it may change while awaiting (VS Code renames
-  // the tab to the running process name mid-execution)
+  // Capture terminal name immediately — VS Code renames the tab to the running process
+  // mid-execution, so reading it later would give the wrong name.
   const terminalName = terminal.name;
-
-  // Scan chunks as they arrive so long-running processes (foreman, rails server, sidekiq)
-  // are monitored in real-time rather than only after they exit.
-  //
-  // tail holds a sliding window of recent raw output. It grows with each chunk and is
-  // trimmed back to TAIL_KEEP_CHARS whenever it exceeds TAIL_MAX_CHARS, ensuring patterns
-  // that straddle chunk boundaries are still matched while keeping memory bounded.
   const TAIL_MAX_CHARS = 10_000;
   const TAIL_KEEP_CHARS = 5_000;
-  let tail = "";
+
+  const state: ExecutionState = { terminalName, tail: "" };
+  executionStates.set(execution, state);
 
   for await (const chunk of execution.read()) {
-    tail += chunk;
+    state.tail += chunk;
 
-    // Scan BEFORE trimming: if a large chunk arrives all at once (e.g. foreman with 4 processes
-    // dying simultaneously the entire output lands in one chunk), trimming first would discard
-    // the early lines containing the first error occurrence, leaving only the tail of the last
-    // process's stack trace to scan against.
-    const clean = stripAnsi(tail);
-    const patterns = getPatterns();
+    // Scan BEFORE trimming: if a large chunk arrives all at once (e.g. foreman with 4
+    // processes dying simultaneously), trimming first discards early lines containing
+    // the first error occurrence.
+    const clean = stripAnsi(state.tail);
 
-    for (const raw of patterns) {
-      const regex = new RegExp(raw, "i");
-      const match = regex.exec(clean);
-      if (match) {
-        const now = Date.now();
-        const last = lastAlertAt.get(terminalName) ?? 0;
-        if (now - last < COOLDOWN_MS) {
-          log(`Pattern matched "${raw}" in "${terminalName}" but suppressed (cooldown)`);
-          tail = "";
-          break;
-        }
+    for (const raw of getPatterns()) {
+      const match = new RegExp(raw, "i").exec(clean);
+      if (!match) continue;
 
+      if (cooldown.isSuppressed(terminalName)) {
+        log(`Pattern matched "${raw}" in "${terminalName}" but suppressed (cooldown)`);
+      } else {
         log(`Pattern matched: "${raw}" at index ${match.index}`);
-        lastAlertAt.set(terminalName, now);
-        const detected: DetectedError = {
+        cooldown.record(terminalName);
+        alertedExecutions.add(execution);
+        onErrorDetected({
           raw: extractErrorBlock(clean, match.index),
           terminal: terminalName,
           timestamp: new Date(),
           pattern: raw,
-        };
-        onErrorDetected(detected);
-        // Clear tail after reporting so the same error block isn't re-matched on the next chunk
-        tail = "";
-        break;
+        });
       }
+
+      state.tail = "";
+      break;
     }
 
-    // Trim after scanning to bound memory for long-running processes that produce continuous output
-    if (tail.length > TAIL_MAX_CHARS) {
-      tail = tail.slice(-TAIL_KEEP_CHARS);
+    if (state.tail.length > TAIL_MAX_CHARS) {
+      state.tail = state.tail.slice(-TAIL_KEEP_CHARS);
     }
   }
 
   log(`Stream ended for "${terminalName}"`);
+}
+
+function handleShellEnd(
+  execution: vscode.TerminalShellExecution,
+  exitCode: number | undefined
+): void {
+  if (exitCode === undefined || exitCode === 0) return;
+
+  const state = executionStates.get(execution);
+  const terminalName = state?.terminalName ?? "unknown";
+
+  if (alertedExecutions.has(execution)) {
+    log(`Exit code ${exitCode} in "${terminalName}" — already reported via pattern match, skipping`);
+    return;
+  }
+
+  if (cooldown.isSuppressed(terminalName)) {
+    log(`Exit code ${exitCode} in "${terminalName}" suppressed (cooldown)`);
+    return;
+  }
+
+  log(`Exit code ${exitCode} detected for "${terminalName}"`);
+  cooldown.record(terminalName);
+
+  const raw = state?.tail ? stripAnsi(state.tail).trim() : "";
+
+  // Try to pinpoint the most relevant line using patterns so the shown block is
+  // focused rather than just a raw tail dump. Falls back to the last 30 lines.
+  let errorBlock = "";
+  if (raw) {
+    for (const p of getPatterns()) {
+      const match = new RegExp(p, "i").exec(raw);
+      if (match) {
+        errorBlock = extractErrorBlock(raw, match.index);
+        break;
+      }
+    }
+    if (!errorBlock) {
+      errorBlock = raw.split("\n").filter((l) => l.trim()).slice(-30).join("\n");
+    }
+  }
+
+  onErrorDetected({
+    raw: errorBlock || `Command exited with code ${exitCode}`,
+    terminal: terminalName,
+    timestamp: new Date(),
+    pattern: `exit code ${exitCode}`,
+  });
 }
