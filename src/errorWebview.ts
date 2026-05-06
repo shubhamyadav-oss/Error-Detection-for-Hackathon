@@ -338,6 +338,33 @@ function buildHtml(error: DetectedError): string {
       font-size: 11px;
       padding: 4px 10px;
     }
+    .explain-panel {
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .explain-section {
+      padding: 14px;
+    }
+    .explain-section + .explain-section {
+      border-top: 1px solid var(--vscode-panel-border);
+    }
+    .explain-section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vscode-descriptionForeground);
+      margin: 0 0 8px 0;
+    }
+    .explain-section p {
+      font-size: 13px;
+      margin: 0;
+      line-height: 1.6;
+    }
+    .explain-section pre {
+      margin: 0;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -362,7 +389,7 @@ function buildHtml(error: DetectedError): string {
   <p class="actions-label">What do you want to do?</p>
   <div class="actions">
     <button id="btn-search" onclick="cycleSearchDemo()">Search Slack &amp; Notion</button>
-    <button id="btn-explain" class="secondary" onclick="vscode.postMessage({ command: 'explain', errorText: errorText }); showLoading('Asking AI to explain...')">Explain Error</button>
+    <button id="btn-explain" class="secondary" onclick="vscode.postMessage({ command: 'explain', errorText: errorText }); showExplainDemo()">Explain Error</button>
     <button id="btn-no-match" class="secondary" onclick="vscode.postMessage({ command: 'no_match', errorText: errorText }); showNoMatch()">No Match</button>
   </div>
 
@@ -496,6 +523,26 @@ function buildHtml(error: DetectedError): string {
     function copyDraft() {
       const text = document.getElementById('draft-text').innerText;
       navigator.clipboard.writeText(text);
+    }
+
+    function showExplainDemo() {
+      showLoading('Asking AI to explain...');
+      setTimeout(function() {
+        const results = document.getElementById('results');
+        results.style.display = 'block';
+        results.innerHTML =
+          '<p class="results-label">Explanation</p>' +
+          '<div class="explain-panel">' +
+            '<div class="explain-section">' +
+              '<p class="explain-section-label">What happened</p>' +
+              '<p>This error occurs when you call a method (<code>save!</code>) on a <code>nil</code> object. In Ruby, <code>nil:NilClass</code> is the null type — calling any method on it raises <code>NoMethodError</code>. This typically means the object was never initialised, or a database query returned <code>nil</code> instead of a record.</p>' +
+            '</div>' +
+            '<div class="explain-section">' +
+              '<p class="explain-section-label">Suggested fix</p>' +
+              '<pre>// Add a nil check before calling save!\nif user_account\n  user_account.save!\nelse\n  Rails.logger.warn "UserAccount not found"\nend\n\n// Or use the safe navigation operator\nuser_account&.save!</pre>' +
+            '</div>' +
+          '</div>';
+      }, 900);
     }
   </script>
 </body>
