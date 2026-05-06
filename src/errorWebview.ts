@@ -205,7 +205,7 @@ function buildHtml(error: DetectedError): string {
       flex-shrink: 0;
     }
     .source-badge.slack {
-      background: #4a154b;
+      background: #2c783c;
       color: #fff;
     }
     .source-badge.notion {
@@ -359,10 +359,6 @@ function buildHtml(error: DetectedError): string {
       <span class="meta-value">${escapeHtml(error.pattern)}</span>
     </div>
   </div>
-  <p class="section-label">Output</p>
-  <pre>${escapeHtml(error.raw)}</pre>
-
-  <hr class="divider" />
   <p class="actions-label">What do you want to do?</p>
   <div class="actions">
     <button id="btn-search" onclick="cycleSearchDemo()">Search Slack &amp; Notion</button>
@@ -371,6 +367,10 @@ function buildHtml(error: DetectedError): string {
   </div>
 
   <div id="results"></div>
+
+  <hr class="divider" />
+  <p class="section-label">Output</p>
+  <pre>${escapeHtml(error.raw)}</pre>
 
   <script>
     const vscode = acquireVsCodeApi();
