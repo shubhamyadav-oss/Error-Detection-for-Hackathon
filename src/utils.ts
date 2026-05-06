@@ -20,12 +20,12 @@ export function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
-// Grabs up to 5 lines before the match and 10 lines after for context
+// Grabs up to 5 lines before the match and 30 lines after for context (stack traces can be long)
 export function extractErrorBlock(buffer: string, matchIndex: number): string {
   const lines = buffer.split("\n");
   const lineOfMatch = buffer.slice(0, matchIndex).split("\n").length - 1;
   const start = Math.max(0, lineOfMatch - 5);
-  return lines.slice(start, lineOfMatch + 10).join("\n").trim();
+  return lines.slice(start, lineOfMatch + 30).join("\n").trim();
 }
 
 export function getPatterns(): string[] {
