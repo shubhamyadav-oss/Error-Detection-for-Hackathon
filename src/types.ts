@@ -4,3 +4,8 @@ export interface DetectedError {
   timestamp: Date;
   pattern: string;
 }
+
+export interface ExecutionState {
+  terminalName: string;
+  tail: string;
+}
