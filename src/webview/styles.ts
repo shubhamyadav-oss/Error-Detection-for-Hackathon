@@ -213,6 +213,34 @@ export function getWebviewStyles(): string {
       background: var(--vscode-button-secondaryBackground);
       color: var(--vscode-button-secondaryForeground);
     }
+    .card-snippet {
+      font-size: 12px;
+      margin: 0 0 8px 0;
+      color: var(--vscode-descriptionForeground);
+      font-style: italic;
+    }
+    .breakdown-line {
+      font-size: 12px;
+      margin: 0 0 10px 0;
+      color: var(--vscode-descriptionForeground);
+    }
+    .breakdown-label {
+      font-weight: 600;
+      color: var(--vscode-foreground);
+    }
+    .result-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .meta-chip {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+    }
     .source-links {
       display: flex;
       flex-direction: column;
