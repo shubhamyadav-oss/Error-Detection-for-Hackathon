@@ -104,7 +104,14 @@ export function getWebviewScript(): string {
       }
       var summaryLine = '';
       if (data && data.common_keywords && data.common_keywords.length > 0) {
-        summaryLine = '<p class="results-summary">Common themes: <strong>' + data.common_keywords.map(escapeText).join(', ') + '</strong></p>';
+        var badges = data.common_keywords
+          .map(function(k) { return '<span class="theme-badge">' + escapeText(k) + '</span>'; })
+          .join('');
+        summaryLine =
+          '<div class="themes-row">' +
+            '<span class="themes-label">Common themes:</span>' +
+            '<div class="theme-badges">' + badges + '</div>' +
+          '</div>';
       }
       var HIGH_CONFIDENCE = 0.6;
       var allResults = (data && Array.isArray(data.results)) ? data.results : [];
