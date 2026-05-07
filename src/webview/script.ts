@@ -106,7 +106,23 @@ export function getWebviewScript(): string {
       if (data && data.common_keywords && data.common_keywords.length > 0) {
         summaryLine = '<p class="results-summary">Common themes: <strong>' + data.common_keywords.map(escapeText).join(', ') + '</strong></p>';
       }
-      var cards = (data && Array.isArray(data.results)) ? data.results.map(renderCard).join('') : '';
+      var HIGH_CONFIDENCE = 0.6;
+      var allResults = (data && Array.isArray(data.results)) ? data.results : [];
+      var displayed;
+      if (status === 'strong_match') {
+        var highConfidence = allResults.filter(function(r) { return (r.score || 0) >= HIGH_CONFIDENCE; });
+        displayed = highConfidence.length >= 3
+          ? highConfidence.slice(0, 5)
+          : allResults.slice(0, 5);
+      } else {
+        // weak_match: show top 5, banner already warns the user
+        displayed = allResults.slice(0, 5);
+      }
+      var hiddenCount = allResults.length - displayed.length;
+      var cards = displayed.map(renderCard).join('');
+      var hiddenNote = hiddenCount > 0
+        ? '<p class="hidden-note"><em>' + hiddenCount + ' weaker match' + (hiddenCount === 1 ? '' : 'es') + ' hidden</em></p>'
+        : '';
       var empty = !cards
         ? '<div class="empty-results">No matching results were returned.</div>'
         : '';
@@ -115,6 +131,7 @@ export function getWebviewScript(): string {
         '<p class="results-label">Top matches</p>' +
         summaryLine +
         cards +
+        hiddenNote +
         empty;
     }
 
