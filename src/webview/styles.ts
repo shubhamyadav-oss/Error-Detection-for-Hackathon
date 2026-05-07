@@ -25,6 +25,33 @@ export function getWebviewStyles(): string {
       margin: 0 0 10px 0;
       color: var(--vscode-descriptionForeground);
     }
+    .themes-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 12px 0;
+    }
+    .themes-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--vscode-descriptionForeground);
+    }
+    .theme-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .theme-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 12px;
+      background: var(--vscode-badge-background);
+      color: var(--vscode-badge-foreground);
+      border: 1px solid var(--vscode-panel-border);
+    }
     .empty-results {
       padding: 12px;
       font-size: 12px;
