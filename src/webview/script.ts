@@ -175,7 +175,7 @@ export function getWebviewScript(): string {
           '<div class="card-header" data-index="' + index + '">' +
             '<span class="source-badge ' + escapeAttr(result.source) + '">' + escapeText(result.source) + '</span>' +
             '<span class="card-title">' + escapeText(heading) + '</span>' +
-            '<span class="score-chip">' + Math.round((result.score || 0) * 100) + '%</span>' +
+            '<span class="score-chip ' + escapeAttr(result.source) + '">Relevancy: ' + Math.round((result.score || 0) * 100) + '%</span>' +
             '<span class="chevron">&#9654;</span>' +
           '</div>' +
           '<div class="card-body">' +

@@ -217,6 +217,14 @@ export function getWebviewStyles(): string {
       background: var(--vscode-badge-background);
       color: var(--vscode-badge-foreground);
     }
+    .score-chip.slack {
+      background: #2c783c;
+      color: #fff;
+    }
+    .score-chip.notion {
+      background: #2d2d2d;
+      color: #fff;
+    }
     .chevron {
       font-size: 10px;
       transition: transform 0.2s;
