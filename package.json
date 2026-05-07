@@ -3,9 +3,15 @@
   "displayName": "Cleo Error Detective",
   "description": "Detects errors in terminal output and searches Cleo resources for solutions",
   "version": "0.0.1",
-  "engines": { "vscode": "^1.93.0" },
-  "categories": ["Other"],
-  "activationEvents": ["onStartupFinished"],
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -65,9 +71,21 @@
           "default": true,
           "description": "Enable automatic terminal error detection"
         },
+        "cleoErrorDetective.apiBaseUrl": {
+          "type": "string",
+          "default": "http://localhost:3000",
+          "description": "Base URL of the Error Assistant backend (e.g. http://localhost:3000)"
+        },
+        "cleoErrorDetective.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Bearer token for the Error Assistant backend (matches ERROR_ASSISTANT_SECRET on the BE)"
+        },
         "cleoErrorDetective.patterns": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "default": [
             "Error:",
             "TypeError:",
@@ -139,11 +157,13 @@
   "scripts": {
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "gen-types": "openapi-typescript ../Error-Handling-Assistant-BE/openapi.yaml -o src/types/api.ts"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.93.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.3.0"
   }
 }

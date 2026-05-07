@@ -26,13 +26,13 @@ export function showErrorInWebview(error: DetectedError): void {
     // TODO: replace stubs with real HTTP calls to the backend
     switch (message.command) {
       case 'search':
-        console.log('[error-assistant] search requested:', message.errorText?.slice(0, 80));
+        console.log('[error-assistant] search requested:', message.error?.slice(0, 80));
         break;
       case 'explain':
-        console.log('[error-assistant] explain requested:', message.errorText?.slice(0, 80));
+        console.log('[error-assistant] explain requested:', message.error?.slice(0, 80));
         break;
       case 'no_match':
-        console.log('[error-assistant] no_match requested:', message.errorText?.slice(0, 80));
+        console.log('[error-assistant] no_match requested:', message.error?.slice(0, 80));
         break;
     }
   });
