@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import { DetectedError } from "./types";
+import { getWebviewStyles } from "./webview/styles";
+import { getWebviewScript } from "./webview/script";
 
 let panel: vscode.WebviewPanel | undefined;
 
@@ -14,14 +16,30 @@ export function showErrorInWebview(error: DetectedError): void {
     "cleoErrorDetail",
     "Cleo: Error Detail",
     vscode.ViewColumn.Beside,
-    { enableScripts: false }
+    { enableScripts: true }
   );
 
   panel.webview.html = buildHtml(error);
   panel.onDidDispose(() => { panel = undefined; });
+
+  panel.webview.onDidReceiveMessage((message) => {
+    // TODO: replace stubs with real HTTP calls to the backend
+    switch (message.command) {
+      case 'search':
+        console.log('[error-assistant] search requested:', message.errorText?.slice(0, 80));
+        break;
+      case 'explain':
+        console.log('[error-assistant] explain requested:', message.errorText?.slice(0, 80));
+        break;
+      case 'no_match':
+        console.log('[error-assistant] no_match requested:', message.errorText?.slice(0, 80));
+        break;
+    }
+  });
 }
 
 function buildHtml(error: DetectedError): string {
+  const nonce = getNonce();
   const time = error.timestamp.toLocaleString();
 
   return `<!DOCTYPE html>
@@ -29,70 +47,9 @@ function buildHtml(error: DetectedError): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
   <title>Cleo Error Detail</title>
-  <style>
-    body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      background: var(--vscode-editor-background);
-      padding: 24px;
-      margin: 0;
-      line-height: 1.5;
-    }
-    header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    h1 { font-size: 18px; margin: 0; }
-    .badge {
-      background: var(--vscode-badge-background);
-      color: var(--vscode-badge-foreground);
-      padding: 3px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .meta {
-      display: flex;
-      gap: 32px;
-      font-size: 12px;
-      color: var(--vscode-descriptionForeground);
-      padding-bottom: 20px;
-      margin-bottom: 20px;
-      border-bottom: 1px solid var(--vscode-panel-border);
-    }
-    .meta-item { display: flex; flex-direction: column; gap: 3px; }
-    .meta-label {
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.06em;
-      opacity: 0.65;
-    }
-    .meta-value { font-weight: 500; color: var(--vscode-foreground); }
-    .section-label {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--vscode-descriptionForeground);
-      margin: 0 0 8px 0;
-    }
-    pre {
-      background: var(--vscode-textCodeBlock-background);
-      border: 1px solid var(--vscode-panel-border);
-      border-radius: 6px;
-      padding: 16px;
-      margin: 0;
-      overflow-x: auto;
-      font-family: var(--vscode-editor-font-family);
-      font-size: var(--vscode-editor-font-size);
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-  </style>
+  <style>${getWebviewStyles()}</style>
 </head>
 <body>
   <header>
@@ -113,10 +70,29 @@ function buildHtml(error: DetectedError): string {
       <span class="meta-value">${escapeHtml(error.pattern)}</span>
     </div>
   </div>
+  <p class="actions-label">What do you want to do?</p>
+  <div class="actions">
+    <button id="btn-search">Search Slack &amp; Notion</button>
+    <button id="btn-explain" class="secondary">Explain Error</button>
+    <button id="btn-no-match" class="secondary">No Match</button>
+  </div>
+
+  <div id="results"></div>
+
+  <div id="__error-raw" style="display:none">${escapeHtml(error.raw)}</div>
+
+  <hr class="divider" />
   <p class="section-label">Output</p>
   <pre>${escapeHtml(error.raw)}</pre>
+
+  <script nonce="${nonce}">${getWebviewScript()}</script>
 </body>
 </html>`;
+}
+
+function getNonce(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  return Array.from({ length: 32 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 }
 
 function escapeHtml(s: string): string {
