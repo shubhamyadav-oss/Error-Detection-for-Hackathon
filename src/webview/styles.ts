@@ -1,5 +1,38 @@
 export function getWebviewStyles(): string {
   return `
+    .error-panel {
+      border: 1px solid var(--vscode-inputValidation-errorBorder, #be1100);
+      background: var(--vscode-inputValidation-errorBackground, rgba(190, 17, 0, 0.1));
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+    .error-title { font-weight: 600; margin: 0 0 4px 0; font-size: 13px; }
+    .error-message { margin: 0 0 6px 0; font-size: 12px; }
+    .error-hint { margin: 0; font-size: 11px; opacity: 0.85; }
+    .error-hint code {
+      background: var(--vscode-textCodeBlock-background);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .error-type-tag {
+      font-size: 11px;
+      margin: 0 0 8px 0;
+      color: var(--vscode-descriptionForeground);
+    }
+    .results-summary {
+      font-size: 12px;
+      margin: 0 0 10px 0;
+      color: var(--vscode-descriptionForeground);
+    }
+    .empty-results {
+      padding: 12px;
+      font-size: 12px;
+      color: var(--vscode-descriptionForeground);
+      border: 1px dashed var(--vscode-panel-border);
+      border-radius: 6px;
+      text-align: center;
+    }
     body {
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
@@ -207,6 +240,34 @@ export function getWebviewStyles(): string {
       margin-bottom: 10px;
     }
     .breakdown-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: var(--vscode-button-secondaryBackground);
+      color: var(--vscode-button-secondaryForeground);
+    }
+    .card-snippet {
+      font-size: 12px;
+      margin: 0 0 8px 0;
+      color: var(--vscode-descriptionForeground);
+      font-style: italic;
+    }
+    .breakdown-line {
+      font-size: 12px;
+      margin: 0 0 10px 0;
+      color: var(--vscode-descriptionForeground);
+    }
+    .breakdown-label {
+      font-weight: 600;
+      color: var(--vscode-foreground);
+    }
+    .result-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .meta-chip {
       font-size: 11px;
       padding: 2px 8px;
       border-radius: 10px;
