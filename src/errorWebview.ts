@@ -2,8 +2,15 @@ import * as vscode from "vscode";
 import { DetectedError } from "./types";
 import { getWebviewStyles } from "./webview/styles";
 import { getWebviewScript } from "./webview/script";
+import { apiClient, ApiError } from "./apiClient";
 
 let panel: vscode.WebviewPanel | undefined;
+
+function postApiError(err: unknown) {
+  const kind = err instanceof ApiError ? err.kind : "unknown";
+  const message = err instanceof Error ? err.message : "Unknown error";
+  panel?.webview.postMessage({ command: "apiError", kind, message });
+}
 
 export function showErrorInWebview(error: DetectedError): void {
   if (panel) {
@@ -22,17 +29,43 @@ export function showErrorInWebview(error: DetectedError): void {
   panel.webview.html = buildHtml(error);
   panel.onDidDispose(() => { panel = undefined; });
 
-  panel.webview.onDidReceiveMessage((message) => {
-    // TODO: replace stubs with real HTTP calls to the backend
+  panel.webview.onDidReceiveMessage(async (message) => {
     switch (message.command) {
-      case 'search':
-        console.log('[error-assistant] search requested:', message.error?.slice(0, 80));
+      case "search":
+        try {
+          const result = await apiClient.search({ error: message.error });
+          if (result.match_status === "weak_match") {
+            try {
+              const weak = await apiClient.weakMatch({ error: message.error, results: result.results as any });
+              panel?.webview.postMessage({ command: "searchResult", data: result, weak });
+            } catch (err) {
+              panel?.webview.postMessage({ command: "searchResult", data: result });
+            }
+          } else if (result.match_status === "no_match") {
+            try {
+              const noMatch = await apiClient.noMatch({ error: message.error });
+              panel?.webview.postMessage({ command: "searchResult", data: result, noMatch });
+            } catch (err) {
+              panel?.webview.postMessage({ command: "searchResult", data: result });
+            }
+          } else {
+            panel?.webview.postMessage({ command: "searchResult", data: result });
+          }
+        } catch (err) { postApiError(err); }
         break;
-      case 'explain':
-        console.log('[error-assistant] explain requested:', message.error?.slice(0, 80));
+
+      case "explain":
+        try {
+          const result = await apiClient.explain({ error: message.error });
+          panel?.webview.postMessage({ command: "explainResult", data: result });
+        } catch (err) { postApiError(err); }
         break;
-      case 'no_match':
-        console.log('[error-assistant] no_match requested:', message.error?.slice(0, 80));
+
+      case "no_match":
+        try {
+          const result = await apiClient.noMatch({ error: message.error });
+          panel?.webview.postMessage({ command: "noMatchResult", data: result });
+        } catch (err) { postApiError(err); }
         break;
     }
   });
