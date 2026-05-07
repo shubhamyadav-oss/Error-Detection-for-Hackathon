@@ -33,6 +33,13 @@ export function getWebviewStyles(): string {
       border-radius: 6px;
       text-align: center;
     }
+    .hidden-note {
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground);
+      text-align: center;
+      margin: 8px 0 0 0;
+      opacity: 0.7;
+    }
     body {
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
