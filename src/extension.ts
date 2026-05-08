@@ -10,6 +10,7 @@ let enabled = true;
 
 export function activate(context: vscode.ExtensionContext) {
   log("Extension activating...");
+  log("Activated..");
 
   createStatusBar(context);
   checkShellIntegration();
